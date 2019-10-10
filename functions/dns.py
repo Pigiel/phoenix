@@ -34,13 +34,13 @@ def save_config(hostname, ip, username, password):
 		ssh.connect(ip, username=username, password=password, timeout=30)
 
 		# Check zones configured in DNS
-		_, output, _ = ssh.exec_command('cd %s; ls zone.*' % ZONES_PATH)
+		_, output, _ = ssh.exec_command('cd {}; ls zone.*'.format(ZONES_PATH))
 		zones = output.read().decode('utf-8').split()
 		# Check private 1 zones configured in DNS
-		_, output, _ = ssh.exec_command('cd %spriv1; ls' % PRIVATE_PATH)
+		_, output, _ = ssh.exec_command('cd {}priv1; ls'.format(PRIVATE_PATH))
 		private1_zones = output.read().decode('utf-8').split()
 		# Check private 2 zones configured in DNS
-		_, output, _ = ssh.exec_command('cd %spriv2; ls' % PRIVATE_PATH)
+		_, output, _ = ssh.exec_command('cd {}priv2; ls'.format(PRIVATE_PATH))
 		private2_zones = output.read().decode('utf-8').split()
 
 		# Open SFTP connection to download DNS config & zone files
@@ -62,7 +62,7 @@ def save_config(hostname, ip, username, password):
 
 	except Exception as e:
 		# Any exception is logged to file with current date
-		FILE_NAME = '%s-errors.log' % hostname
+		FILE_NAME = '{}-errors.log'.format(hostname)
 		log = DATE + ' : ' + str(e)
 		with open(GIT_PATH + hostname + '/' + FILE_NAME, 'a') as f:
 			f.write(log + '\n')
@@ -71,36 +71,6 @@ def save_config(hostname, ip, username, password):
 		ssh.close()
 
 	return (FILE_NAME, zones, private1_zones, private2_zones)
-
-def compare_configs(hostname, config_name, old_config_name):
-	"""
-	Funciton that compare given DNS config file with one stored in git repo.
-	If configs differs then new one is moved to repo path
-
-	Args:
-		hostname:		 device hostname
-		config_name:	 config file name downloaded from the node
-		old_config_name: config file name stored in git repo
-	
-	Return:
-		None
-	"""
-	new_config = TMP_PATH + config_name
-	old_config_path = GIT_PATH + hostname + '/'
-	# If config file names are the same (e.g. same SW version) then compare configs
-	if (config_name == old_config_name):
-		# Compare configs and ommits lines with hashed password - flag "-I +"
-		# Everytime a config file is genereated the hash differs which is not relevant for config changes
-		diff_results = subprocess.run(['diff', '-u', new_config, old_config_path + old_config_name], stdout=subprocess.PIPE)
-		if diff_results.returncode == 0:
-			# If configs are the same then remove downloaded config file
-			subprocess.run(['rm', new_config], stdout=subprocess.PIPE)
-		else:
-			# If configs differs then move downloaded file to git repo
-			subprocess.run(['mv', new_config, old_config_path], stdout=subprocess.PIPE)
-	# If config file names differs (e.g. different SW version) then move downloaded file to git repo
-	else:
-		subprocess.run(['mv', new_config, old_config_path], stdout=subprocess.PIPE)
 
 def files_set(new_file_list, old_file_list, file_path, file_archive_path, file_tmp_path='/tmp/'):
 	"""

@@ -10,6 +10,11 @@ TODAY = datetime.date.today()
 # Indent for CLI logs
 INDENT = '   '
 
+# Messages for config comparison
+COMPARE_CONFIG_IGNORE = INDENT + 'Ignoring - same config in git repo'
+COMPARE_CONFIG_REPLACE = INDENT + 'Replicing file - different config found in git repo'
+COMPARE_CONFIG_ADD = INDENT + 'Adding file - no config present in git repo'
+
 # Login credentials
 # 	should be kept as secrets
 USERNAME = 'kubebot'

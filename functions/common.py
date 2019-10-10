@@ -5,27 +5,32 @@ import paramiko
 
 import functions.cisco.switch as switch
 import functions.cisco.vepc as vepc
+import functions.ericsson.mk as mk
 import functions.dns as dns
 from functions.git import GIT_PATH
 from functions.variables import TMP_PATH, INDENT
 
 
-def get_latest_config(hostname):
+def get_latest_config(hostname, version=None):
 	"""
 	Function to find the newest configuration file for the
 	given hostname in git repository
 
 	Args:
 		hostname: hostname
+		version: file version
 
 	Returns:
 		newest configuration file if available otherwise None
 	"""
-	config_list = sorted(os.listdir(GIT_PATH + hostname))
+	if version is None:
+		config_list = get_files_list(GIT_PATH + hostname, f'{hostname}.cfg')
+	else:
+		config_list = get_files_list(GIT_PATH + hostname, f'{hostname}_{version}.cfg')
 	if len(config_list) < 1:
 		return None
 	else:
-		return config_list[-1]
+		return config_list[0]
 
 
 def get_files_list(files_path, pattern='*'):
@@ -66,12 +71,19 @@ def config_backup(node_type, hosts, username, password):
 		# Creates host directory if not in repo yet
 		if not os.path.exists(path):
 			os.mkdir(path, 0o755) # Creates folder with appropriate permissions
-		old_config = get_latest_config(hostname)
 		new_config = node_type.save_config(hostname, ip, username, password)
 		while not new_config:
 			pass # Wait till configuration file is downloaded from the node
 		print(INDENT + 'Downloaded file: ' + new_config)
-		if (new_config != '%s-errors.log' % hostname):
+		if (new_config != '{}-errors.log'.format(hostname)):
+			# Get the last config file from git repo
+			if node_type in [asr, mk]:
+				# If node is in asr or mk group
+				config_version = new_config.split('_')[1][:-4]
+				old_config = get_latest_config(hostname, config_version)
+			else:
+				old_config = get_latest_config(hostname)
+
 			node_type.compare_configs(hostname, new_config, old_config)
 		else:
 			print(INDENT + 'ERROR Configuration backup unsuccessfull. Check log file for more details')
@@ -137,7 +149,7 @@ def dns_backup(node_type, hosts, username, password):
 		print(INDENT + 'Downloaded file: ' + new_config)
 
 		# Compare config files if no errors occured during download 
-		if (new_config != '%s-errors.log' % hostname):
+		if (new_config != '{}-errors.log'.format(hostname)):
 			# Compare main named.conf config file
 			node_type.compare_configs(hostname, new_config, old_config)
 			# Compare zones configuraiotn file
@@ -171,6 +183,37 @@ def expired_licenses(node_type, hosts, username, password):
 			# Add license to list of expired licences
 			if license_file != None:
 				licenses.append(license_file)
+
+def exec_cmd(hostname, ip, username, password, command):
+	"""
+	Function to execiute command on given remote host and returns output
+
+	Args:
+		hostname: 	node's hostname
+		ip:			node's management ip address
+		username:	user's login to node
+		password:	user's passowrd to node
+		command:	command to execiute
+
+	Returns:
+		command output
+	"""
+	try:
+		ssh = paramiko.SSHClient()
+		ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+		ssh.connect(ip, username=username, password=password, timeout=30)
+		_, output, _ = ssh.exec_command(command)
+		# Wait for the command to execute - required for long command execution
+		output.channel.recv_exit_status()
+		cmd_output = output.read().decode('utf-8')
+	
+	except Exception as e:
+		cmd_output = str(e)
+	
+	finally:
+		ssh.close()
+
+	return cmd_output
 
 def clear_temporary_files(files_extension):
 	"""

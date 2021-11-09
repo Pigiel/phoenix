@@ -48,7 +48,7 @@ def send_mail(send_from, send_to, subject, body, attachments=None,
 	# Content of the mail message in HTML format
 	message.attach(MIMEText(body, 'html'))
 
-	# Add mail attachment if available
+	# Add email attachment if available
 	if attachments != None:
 		for file in attachments:
 			try:

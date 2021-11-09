@@ -34,17 +34,17 @@ def save_config(hostname, ip, username, password):
 		ssh.connect(ip, username=username, password=password, timeout=30)
 
 		# Check zones configured in DNS
-		_, output, _ = ssh.exec_command('cd {}; ls zone.*'.format(ZONES_PATH))
+		_, output, _ = ssh.exec_command(f'cd {ZONES_PATH}; ls zone.*')
 		zones = output.read().decode('utf-8').split()
 		# Check private 1 zones configured in DNS
-		_, output, _ = ssh.exec_command('cd {}priv1; ls'.format(PRIVATE_PATH))
+		_, output, _ = ssh.exec_command(f'cd {PRIVATE_PATH}priv1; ls')
 		private1_zones = output.read().decode('utf-8').split()
 		# Check private 2 zones configured in DNS
-		_, output, _ = ssh.exec_command('cd {}priv2; ls'.format(PRIVATE_PATH))
+		_, output, _ = ssh.exec_command(f'cd {PRIVATE_PATH}priv2; ls')
 		private2_zones = output.read().decode('utf-8').split()
 
 		# Open SFTP connection to download DNS config & zone files
-		sftp.ssh.open_sftp()
+		sftp = ssh.open_sftp()
 		# Download DNS config file
 		sftp.get(SFTP_PATH + FILE_NAME, TMP_PATH + FILE_NAME)
 		# Download zone files
@@ -62,7 +62,7 @@ def save_config(hostname, ip, username, password):
 
 	except Exception as e:
 		# Any exception is logged to file with current date
-		FILE_NAME = '{}-errors.log'.format(hostname)
+		FILE_NAME = f'{hostname}-errors.log'
 		log = DATE + ' : ' + str(e)
 		with open(GIT_PATH + hostname + '/' + FILE_NAME, 'a') as f:
 			f.write(log + '\n')

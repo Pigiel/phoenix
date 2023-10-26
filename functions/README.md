@@ -12,6 +12,7 @@ This folder contains all functions used by scripts located in upper folder
 - `logging_format.py` log formatting that should be imported in each script
 
 Log format can be imported to each script using the following line of code
+
 ```py
 from functions.logging_format import *
 ```
